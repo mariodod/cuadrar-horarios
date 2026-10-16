@@ -107,15 +107,11 @@ create policy "session creator can update own session"
   on public.sessions for update
   using (auth.uid() = created_by);
 
--- Participants: los participantes pueden ver quiénes están en la sesión
-create policy "participants can view participants of their sessions"
+-- Participants: un usuario solo ve sus propios registros de participante
+-- (evita recursión infinita al no consultar la misma tabla en la política)
+create policy "users can view own participant records"
   on public.participants for select
-  using (
-    exists (
-      select 1 from public.participants p
-      where p.session_id = participants.session_id and p.user_id = auth.uid()
-    )
-  );
+  using (auth.uid() = user_id);
 
 create policy "users can join sessions"
   on public.participants for insert

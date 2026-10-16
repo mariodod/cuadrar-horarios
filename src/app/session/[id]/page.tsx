@@ -3,6 +3,35 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import OverlapGrid from "../../components/overlap-grid";
 
+type Profile = {
+  name: string | null;
+  email: string | null;
+};
+
+type Participant = {
+  id: string;
+  user_id: string;
+  profiles: Profile | null;
+};
+
+type Availability = {
+  id: string;
+  user_id: string;
+  day: string;
+  start_time: string;
+  end_time: string;
+};
+
+type Session = {
+  id: string;
+  title: string;
+  created_by: string | null;
+  is_active: boolean;
+  created_at: string;
+  participants: (Participant & { profiles: Profile | null })[];
+  availabilities: Availability[];
+};
+
 export default async function SessionPage({
   params,
 }: {
@@ -48,6 +77,14 @@ export default async function SessionPage({
     .single();
 
   if (error || !session) {
+    notFound();
+  }
+
+  // Verificar que el usuario sea participante de la sesión
+  const isParticipant = session.participants.some(
+    (p) => p.user_id === user.id
+  );
+  if (!isParticipant) {
     notFound();
   }
 
@@ -113,7 +150,7 @@ export default async function SessionPage({
           </div>
           <div className="flex items-center gap-2">
             <p className="hidden sm:block text-sm text-zinc-500 dark:text-zinc-400">
-              {session.participants?.length} participante(s)
+              {session.participants.length} participante(s)
             </p>
             <button
               className="hidden sm:flex items-center gap-2 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-1.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
@@ -136,7 +173,7 @@ export default async function SessionPage({
               Participantes
             </h2>
             <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 p-4">
-              {session.participants?.map((p: any) => (
+              {session.participants.map((p: Participant) => (
                 <div
                   key={p.id}
                   className="flex items-center justify-between py-2 border-b border-zinc-100 dark:border-zinc-800/50 last:border-0"

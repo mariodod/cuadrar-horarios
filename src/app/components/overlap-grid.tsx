@@ -1,7 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
 interface Overlap {
   day: string;
   start: string;
@@ -9,19 +7,6 @@ interface Overlap {
 }
 
 export default function OverlapGrid({ overlaps }: { overlaps: Overlap[] }) {
-  const [grouped, setGrouped] = useState<Map<string, Overlap[]>>(new Map());
-
-  useEffect(() => {
-    const map = new Map<string, Overlap[]>();
-    for (const o of overlaps) {
-      if (!map.has(o.day)) {
-        map.set(o.day, []);
-      }
-      map.get(o.day)!.push(o);
-    }
-    setGrouped(map);
-  }, [overlaps]);
-
   if (overlaps.length === 0) {
     return (
       <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 p-6 text-center">
@@ -33,6 +18,15 @@ export default function OverlapGrid({ overlaps }: { overlaps: Overlap[] }) {
         </p>
       </div>
     );
+  }
+
+  // Agrupar por día
+  const grouped = new Map<string, Overlap[]>();
+  for (const o of overlaps) {
+    if (!grouped.has(o.day)) {
+      grouped.set(o.day, []);
+    }
+    grouped.get(o.day)!.push(o);
   }
 
   const days = Array.from(grouped.keys()).sort();

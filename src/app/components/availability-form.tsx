@@ -9,13 +9,17 @@ import { createClient } from "../../lib/supabase/client";
 import { useRouter } from "next/navigation";
 import type { Database } from "../../types/supabase";
 
-type AvailabilityInsert = Database["public"]["Tables"]["availabilities"]["Insert"];
-
 const availabilitySchema = z.object({
   day: z.string().refine((d) => !isNaN(Date.parse(d)), "Fecha inválida"),
   start_time: z.string().min(1, "Hora de inicio requerida"),
   end_time: z.string().min(1, "Hora de fin requerida"),
-});
+}).refine(
+  (data) => data.start_time < data.end_time,
+  {
+    message: "La hora de fin debe ser posterior a la hora de inicio",
+    path: ["end_time"],
+  }
+);
 
 type AvailabilityForm = z.infer<typeof availabilitySchema>;
 
@@ -111,15 +115,23 @@ export default function AvailabilityForm({
         <p className="text-zinc-600 dark:text-zinc-400 mt-2">
           Tu bloque de disponibilidad se ha registrado correctamente.
         </p>
-        <Button
-          onClick={() => {
-            setSuccess(false);
-            onSuccess();
-          }}
-          className="mt-4"
-        >
-          Agregar otro bloque
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-2 mt-4">
+          <Button
+            onClick={() => {
+              setSuccess(false);
+              onSuccess();
+            }}
+          >
+            Agregar otro bloque
+          </Button>
+          <Button
+            asChild
+            variant="outline"
+            className="w-auto"
+          >
+            <a href={`/session/${sessionId}`}>Ver coincidencias</a>
+          </Button>
+        </div>
       </div>
     );
   }
