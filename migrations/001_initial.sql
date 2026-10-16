@@ -101,7 +101,7 @@ create policy "participants can view sessions they join"
 
 create policy "users can create sessions"
   on public.sessions for insert
-  with check (auth.uid() = created_by);
+  with check (auth.role() = 'authenticated');
 
 create policy "session creator can update own session"
   on public.sessions for update
