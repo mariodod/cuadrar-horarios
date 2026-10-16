@@ -4,8 +4,8 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Button } from "@/components/ui/button";
-import { createClient } from "@/lib/supabase/client";
+import { Button } from "../components/ui/button";
+import { createClient } from "../../lib/supabase/client";
 
 const loginSchema = z.object({
   email: z.string().email("Ingresa un correo válido"),

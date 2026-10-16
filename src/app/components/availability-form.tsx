@@ -4,10 +4,10 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Button } from "@/components/ui/button";
-import { createClient } from "@/lib/supabase/client";
+import { Button } from "./ui/button";
+import { createClient } from "../../lib/supabase/client";
 import { useRouter } from "next/navigation";
-import type { Database } from "@/types/supabase";
+import type { Database } from "../../types/supabase";
 
 type AvailabilityInsert = Database["public"]["Tables"]["availabilities"]["Insert"];
 
@@ -59,7 +59,7 @@ export default function AvailabilityForm({
       return;
     }
 
-    const availability: AvailabilityInsert = {
+    const availability = {
       session_id: sessionId,
       user_id: user.id,
       day: data.day,

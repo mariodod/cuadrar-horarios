@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import OverlapGrid from "@/components/overlap-grid";
+import OverlapGrid from "../../components/overlap-grid";
 
 export default async function SessionPage({
   params,

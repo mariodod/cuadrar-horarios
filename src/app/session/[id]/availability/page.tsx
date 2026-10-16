@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import AvailabilityForm from "@/components/availability-form";
+import AvailabilityForm from "../../../components/availability-form";
 
 export default async function AvailabilityPage({
   params,
