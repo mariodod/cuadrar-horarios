@@ -160,7 +160,8 @@ export default function NewSessionPage() {
       });
     }
 
-    router.push(`/session/${session.id}`);
+    // Usar window.location.href para forzar recarga completa y enviar cookies de auth correctamente
+    window.location.href = `/session/${session.id}`;
   };
 
   return (
