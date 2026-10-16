@@ -25,18 +25,30 @@ type AvailabilityForm = z.infer<typeof availabilitySchema>;
 
 interface AvailabilityFormProps {
   sessionId: string;
+  editingId: string | null;
+  editingBlock: {
+    id: string;
+    day: string;
+    start_time: string;
+    end_time: string;
+  } | null;
+  onCancel: () => void;
   onSuccess: () => void;
 }
 
 export default function AvailabilityForm({
   sessionId,
+  editingId,
+  editingBlock,
+  onCancel,
   onSuccess,
 }: AvailabilityFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
   const router = useRouter();
   const supabase = createClient();
+
+  const isEditing = editingId !== null && editingBlock !== null;
 
   const {
     register,
@@ -46,9 +58,9 @@ export default function AvailabilityForm({
   } = useForm<AvailabilityForm>({
     resolver: zodResolver(availabilitySchema),
     defaultValues: {
-      day: "",
-      start_time: "09:00",
-      end_time: "12:00",
+      day: editingBlock?.day ?? "",
+      start_time: editingBlock?.start_time ?? "09:00",
+      end_time: editingBlock?.end_time ?? "12:00",
     },
   });
 
@@ -63,7 +75,7 @@ export default function AvailabilityForm({
       return;
     }
 
-    const availability = {
+    const payload = {
       session_id: sessionId,
       user_id: user.id,
       day: data.day,
@@ -71,17 +83,26 @@ export default function AvailabilityForm({
       end_time: data.end_time,
     };
 
-    const { error: supabaseError } = await supabase
-      .from("availabilities")
-      .insert(availability);
+    let result;
+    if (isEditing && editingId) {
+      result = await supabase
+        .from("availabilities")
+        .update(payload)
+        .eq("id", editingId)
+        .eq("user_id", user.id);
+    } else {
+      result = await supabase
+        .from("availabilities")
+        .insert(payload);
+    }
 
-    if (supabaseError) {
-      setError(supabaseError.message);
+    if (result.error) {
+      setError(result.error.message);
       setLoading(false);
       return;
     }
 
-    setSuccess(true);
+    setError(null);
     setLoading(false);
     reset({
       day: "",
@@ -91,59 +112,16 @@ export default function AvailabilityForm({
     onSuccess();
   };
 
-  if (success) {
-    return (
-      <div className="flex flex-col items-center justify-center py-8 text-center">
-        <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-4">
-          <svg
-            className="w-6 h-6 text-green-600 dark:text-green-400"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M5 13l4 4L19 7"
-            />
-          </svg>
-        </div>
-        <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">
-          Disponibilidad guardada
-        </h3>
-        <p className="text-zinc-600 dark:text-zinc-400 mt-2">
-          Tu bloque de disponibilidad se ha registrado correctamente.
-        </p>
-        <div className="flex flex-col sm:flex-row gap-2 mt-4">
-          <Button
-            onClick={() => {
-              setSuccess(false);
-              onSuccess();
-            }}
-          >
-            Agregar otro bloque
-          </Button>
-          <Button
-            asChild
-            variant="outline"
-            className="w-auto"
-          >
-            <a href={`/session/${sessionId}`}>Ver coincidencias</a>
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="max-w-lg mx-auto space-y-6">
       <div className="space-y-2">
         <h2 className="text-xl font-bold text-zinc-900 dark:text-white">
-          Tu disponibilidad
+          {isEditing ? "Editar disponibilidad" : "Registrar disponibilidad"}
         </h2>
         <p className="text-zinc-600 dark:text-zinc-400">
-          Selecciona el día y el rango horario en el que estás disponible.
+          {isEditing
+            ? "Modifica el día y el rango horario de tu bloque."
+            : "Selecciona el día y el rango horario en el que estás disponible."}
         </p>
       </div>
 
@@ -197,9 +175,21 @@ export default function AvailabilityForm({
           </div>
         )}
 
-        <Button type="submit" disabled={loading} className="w-full">
-          {loading ? "Guardando..." : "Guardar disponibilidad"}
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button type="submit" disabled={loading} className="w-full sm:w-auto">
+            {loading ? (isEditing ? "Actualizando..." : "Guardando...") : (isEditing ? "Actualizar" : "Guardar disponibilidad")}
+          </Button>
+          {isEditing && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onCancel}
+              className="w-full sm:w-auto"
+            >
+              Cancelar
+            </Button>
+          )}
+        </div>
       </form>
     </div>
   );

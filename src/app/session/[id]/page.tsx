@@ -137,6 +137,30 @@ export default async function SessionPage({
     }
   }
 
+  // Agrupar disponibilidades por usuario para mostrarlas
+  const availabilityByUser = new Map<
+    string,
+    { name: string; email: string | null; blocks: Availability[] }
+  >();
+
+  for (const p of session.participants) {
+    const key = p.user_id;
+    if (!availabilityByUser.has(key)) {
+      availabilityByUser.set(key, {
+        name: p.profiles?.name || p.profiles?.email || "Usuario",
+        email: p.profiles?.email || null,
+        blocks: [],
+      });
+    }
+  }
+
+  for (const a of session.availabilities ?? []) {
+    const userInfo = availabilityByUser.get(a.user_id);
+    if (userInfo) {
+      userInfo.blocks.push(a);
+    }
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-zinc-50 dark:bg-zinc-900">
       <header className="border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
@@ -146,12 +170,12 @@ export default async function SessionPage({
               {session.title}
             </h1>
             <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-              Activa
+              {session.participants.length} participantes
             </span>
           </div>
           <div className="flex items-center gap-2">
             <p className="hidden sm:block text-sm text-zinc-500 dark:text-zinc-400">
-              {session.participants.length} participante(s)
+              {session.participants.length} persona(s)
             </p>
             <CopyLinkButton sessionId={session.id} />
           </div>
@@ -162,7 +186,7 @@ export default async function SessionPage({
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <section className="space-y-4">
             <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">
-              Participantes
+              Participantes ({session.participants.length})
             </h2>
             <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 p-4">
               {session.participants.map((p: Participant) => (
@@ -190,6 +214,56 @@ export default async function SessionPage({
                 </svg>
                 Registrar mi disponibilidad
               </a>
+            </div>
+          </section>
+
+          <section className="space-y-4">
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">
+              Disponibilidad registrada
+            </h2>
+            <div className="space-y-4">
+              {Array.from(availabilityByUser.entries()).map(
+                ([userId, info]) => (
+                  <div
+                    key={userId}
+                    className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 p-4"
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-base font-semibold text-zinc-900 dark:text-white">
+                        {info.name}
+                      </h3>
+                      <span className="text-xs text-zinc-500 dark:text-zinc-500">
+                        {info.blocks.length} bloque(s)
+                      </span>
+                    </div>
+                    {info.blocks.length === 0 ? (
+                      <p className="text-sm text-zinc-500 dark:text-zinc-400 italic">
+                        Sin disponibilidad registrada
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {info.blocks.map((b) => (
+                          <div
+                            key={b.id}
+                            className="flex items-center justify-between py-1.5 border-b border-zinc-50 dark:border-zinc-800/30 last:border-0"
+                          >
+                            <span className="text-sm text-zinc-700 dark:text-zinc-300">
+                              {new Date(b.day + "T00:00:00").toLocaleDateString("es-ES", {
+                                weekday: "short",
+                                day: "2-digit",
+                                month: "2-digit",
+                              })}
+                            </span>
+                            <span className="text-sm font-mono text-zinc-900 dark:text-zinc-100">
+                              {b.start_time.substring(0, 5)} – {b.end_time.substring(0, 5)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )
+              )}
             </div>
           </section>
 
