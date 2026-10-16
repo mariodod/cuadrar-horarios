@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import AvailabilityForm from "../../../components/availability-form";
+import BackButton from "../../../components/back-button";
 
 export default async function AvailabilityPage({
   params,
@@ -42,15 +43,7 @@ export default async function AvailabilityPage({
       <header className="border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => window.history.back()}
-              className="rounded-md text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors"
-              aria-label="Volver"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-            </button>
+            <BackButton />
             <h1 className="text-xl font-semibold text-zinc-900 dark:text-white">
               {session.title}
             </h1>
