@@ -1,41 +1,95 @@
-import { notFound, redirect } from "next/navigation";
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
-import { cookies } from "next/headers";
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "./supabase-client";
 import AvailabilityForm from "../../../components/availability-form";
 import BackButton from "../../../components/back-button";
 
-export default async function AvailabilityPage({
+export default function AvailabilityPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
-  const cookieStore = cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-      },
-    }
-  );
+  const router = useRouter();
+  const [session, setSession] = useState<{ id: string; title: string } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    redirect("/login");
+  const supabase = createClient();
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadSession() {
+      try {
+        const { id } = await params;
+
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          router.push("/login");
+          return;
+        }
+
+        const { data: sessionData, error: sessionError } = await supabase
+          .from("sessions")
+          .select("id, title")
+          .eq("id", id)
+          .single();
+
+        if (sessionError || !sessionData) {
+          setError("Sesión no encontrada");
+          setLoading(false);
+          return;
+        }
+
+        if (mounted) {
+          setSession(sessionData);
+        }
+      } catch (err) {
+        if (mounted) {
+          setError("Error cargando la sesión");
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadSession();
+    return () => {
+      mounted = false;
+    };
+  }, [params, router, supabase]);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-50 dark:bg-zinc-900">
+        <div className="animate-pulse flex flex-col items-center gap-4">
+          <div className="h-8 w-32 rounded-full bg-zinc-200 dark:bg-zinc-800" />
+          <div className="h-8 w-16 rounded-full bg-zinc-200 dark:bg-zinc-800" />
+        </div>
+      </div>
+    );
   }
 
-  const { data: session, error } = await supabase
-    .from("sessions")
-    .select("id, title")
-    .eq("id", id)
-    .single();
-
   if (error || !session) {
-    notFound();
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-50 dark:bg-zinc-900 px-4">
+        <div className="max-w-md text-center">
+          <h1 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">
+            {error || "Sesión no encontrada"}
+          </h1>
+          <button
+            onClick={() => router.push("/")}
+            className="mt-4 px-4 py-2 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors"
+          >
+            Volver al inicio
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -68,7 +122,12 @@ export default async function AvailabilityPage({
             </p>
           </div>
 
-          <AvailabilityForm sessionId={id} onSuccess={() => {}} />
+          <AvailabilityForm
+            sessionId={session.id}
+            onSuccess={() => {
+              router.push(`/session/${session.id}`);
+            }}
+          />
         </div>
       </main>
     </div>

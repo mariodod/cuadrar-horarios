@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "../../components/ui/button";
-import { createClient } from "../../../lib/supabase/client";
+import { createClient } from "../../lib/supabase/client";
 import { useRouter } from "next/navigation";
 
 const createSessionSchema = z.object({

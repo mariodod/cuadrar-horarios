@@ -5,9 +5,9 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "./ui/button";
-import { createClient } from "../../lib/supabase/client";
+import { createClient } from "../lib/supabase/client";
 import { useRouter } from "next/navigation";
-import type { Database } from "../../types/supabase";
+import type { Database } from "../types/supabase";
 
 const availabilitySchema = z.object({
   day: z.string().refine((d) => !isNaN(Date.parse(d)), "Fecha inválida"),
