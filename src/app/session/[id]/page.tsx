@@ -23,6 +23,16 @@ type Availability = {
   end_time: string;
 };
 
+type Vote = {
+  id: string;
+  session_id: string;
+  overlap_day: string;
+  overlap_start_time: string;
+  overlap_end_time: string;
+  user_id: string;
+  vote_type: "yes" | "no" | "maybe";
+};
+
 type Session = {
   id: string;
   title: string;
@@ -31,6 +41,7 @@ type Session = {
   created_at: string;
   participants: (Participant & { profiles: Profile | null })[];
   availabilities: Availability[];
+  votes: Vote[];
 };
 
 export default async function SessionPage({
@@ -72,6 +83,15 @@ export default async function SessionPage({
         day,
         start_time,
         end_time
+      ),
+      votes (
+        id,
+        session_id,
+        overlap_day,
+        overlap_start_time,
+        overlap_end_time,
+        user_id,
+        vote_type
       )
     `)
     .eq("id", id)
@@ -137,6 +157,24 @@ export default async function SessionPage({
     }
   }
 
+  // Construir mapa de votos del usuario actual y conteos por coincidencia
+  const userVotes: Record<string, "yes" | "no" | "maybe"> = {};
+  const voteCounts: Record<string, { yes: number; no: number; maybe: number }> = {};
+
+  for (const v of session.votes ?? []) {
+    const key = `${v.overlap_day}|${v.overlap_start_time}|${v.overlap_end_time}`;
+
+    if (!voteCounts[key]) {
+      voteCounts[key] = { yes: 0, no: 0, maybe: 0 };
+    }
+    const voteType = v.vote_type as "yes" | "no" | "maybe";
+    voteCounts[key][voteType] += 1;
+
+    if (v.user_id === user.id) {
+      userVotes[key] = v.vote_type;
+    }
+  }
+
   // Agrupar disponibilidades por usuario para mostrarlas
   const availabilityByUser = new Map<
     string,
@@ -158,6 +196,21 @@ export default async function SessionPage({
     const userInfo = availabilityByUser.get(a.user_id);
     if (userInfo) {
       userInfo.blocks.push(a);
+    }
+  }
+
+  async function handleVoteChange(
+    day: string,
+    start: string,
+    end: string,
+    voteType: "yes" | "no" | "maybe" | null
+  ) {
+    // El voto se guarda en el cliente mediante VoteButton (usa Supabase directamente)
+    // Esta función se mantiene para sincronizar estado local si fuera necesario
+    const key = `${day}|${start}|${end}`;
+    if (voteType === null) {
+      // Eliminar voto
+      // Nota: la eliminación se maneja en VoteButton con upsert de voto anterior o nuevo
     }
   }
 
@@ -275,6 +328,9 @@ export default async function SessionPage({
               overlaps={overlaps}
               sessionId={session.id}
               sessionTitle={session.title}
+              userVotes={userVotes}
+              voteCounts={voteCounts}
+              onVoteChange={handleVoteChange}
             />
           </section>
         </div>
