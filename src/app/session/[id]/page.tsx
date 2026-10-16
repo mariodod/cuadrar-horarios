@@ -271,7 +271,11 @@ export default async function SessionPage({
             <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">
               Horas en las que coinciden
             </h2>
-            <OverlapGrid overlaps={overlaps} />
+            <OverlapGrid
+              overlaps={overlaps}
+              sessionId={session.id}
+              sessionTitle={session.title}
+            />
           </section>
         </div>
       </main>
