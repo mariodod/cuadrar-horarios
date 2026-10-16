@@ -106,7 +106,7 @@ export default function LoginPage() {
 
         <p className="text-sm text-zinc-600 dark:text-zinc-400 text-center">
           ¿No tienes cuenta?{" "}
-          <a href="/session/new" className="font-medium text-blue-600 dark:text-blue-400 hover:underline">
+          <a href="/register" className="font-medium text-blue-600 dark:text-blue-400 hover:underline">
             Regístrate como nuevo usuario
           </a>
         </p>
