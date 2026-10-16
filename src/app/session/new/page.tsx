@@ -44,6 +44,29 @@ export default function NewSessionPage() {
       return;
     }
 
+    // Asegurar que el perfil exista
+    const { data: existingProfile } = await supabase
+      .from("profiles")
+      .select("id, email, name")
+      .eq("id", user.id)
+      .single();
+
+    if (!existingProfile) {
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .insert({
+          id: user.id,
+          email: user.email,
+          name: user.user_metadata?.name || null,
+        });
+
+      if (profileError) {
+        setError("Error al crear perfil: " + profileError.message);
+        setLoading(false);
+        return;
+      }
+    }
+
     const { data: session, error: supabaseError } = await supabase
       .from("sessions")
       .insert({
