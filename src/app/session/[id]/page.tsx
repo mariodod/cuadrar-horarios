@@ -82,7 +82,7 @@ export default async function SessionPage({
 
   // Verificar que el usuario sea participante de la sesión
   const isParticipant = session.participants.some(
-    (p) => p.user_id === user.id
+    (p: { user_id: string }) => p.user_id === user.id
   );
   if (!isParticipant) {
     notFound();
