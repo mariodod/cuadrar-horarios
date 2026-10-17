@@ -11,6 +11,7 @@ const config = {
   setupFilesAfterEnv: ["<rootDir>/jest.setup.js"],
   testEnvironment: "jest-environment-jsdom",
   testMatch: ["**/__tests__/**/*.test.[jt]s?(x)", "**/?(*.)+(spec|test).[jt]s?(x)"],
+  testPathIgnorePatterns: ["tests/e2e"],
   moduleNameMapper: {
     // Handle module aliases (if you use them in your project)
     "^@/(.*)$": "<rootDir>/src/$1",
