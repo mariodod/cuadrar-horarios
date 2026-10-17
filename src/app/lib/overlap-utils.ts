@@ -66,13 +66,14 @@ export function calculateOverlaps(
   const overlaps: OverlapBlock[] = [];
 
   // Agrupar bloques por día
-  const byDay = new Map<string, Array<{ user_id: string; start_time: string; end_time: string }>>();
+  const byDay = new Map<string, Array<AvailabilityBlock & { user_id: string }>>();
 
   for (const a of availabilities) {
     if (!byDay.has(a.day)) {
       byDay.set(a.day, []);
     }
     byDay.get(a.day)!.push({
+      day: a.day,
       user_id: a.user_id,
       start_time: a.start_time,
       end_time: a.end_time,
