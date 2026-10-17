@@ -73,6 +73,7 @@ export default function SessionPage({
         }
         setCurrentUserId(user.id);
 
+        // Intentar obtener la sesión con todas las relaciones
         const { data: sessionData, error: sessionError } = await supabase
           .from("sessions")
           .select(`
@@ -103,8 +104,9 @@ export default function SessionPage({
           .single();
 
         if (sessionError || !sessionData) {
+          console.error("Error obteniendo sesión:", sessionError);
           if (mounted) {
-            setError("Sesión no encontrada");
+            setError(sessionError?.message || "Sesión no encontrada");
           }
           return;
         }
@@ -115,7 +117,7 @@ export default function SessionPage({
         );
         if (!isParticipant) {
           if (mounted) {
-            setError("No tienes acceso a esta sesión");
+            setError("No tienes acceso a esta sesión. Contacta al creador para ser agregado como participante.");
           }
           return;
         }
@@ -125,7 +127,8 @@ export default function SessionPage({
         }
       } catch (err) {
         if (mounted) {
-          setError("Error cargando la sesión");
+          setError("Error inesperado cargando la sesión");
+          console.error(err);
         }
       } finally {
         if (mounted) {
