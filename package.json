@@ -9,7 +9,10 @@
     "lint": "next lint",
     "test": "jest --watch",
     "test:ci": "jest --ci",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:ci": "playwright test --ci"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
@@ -29,6 +32,7 @@
     "zod": "^3.23.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.5.2",
