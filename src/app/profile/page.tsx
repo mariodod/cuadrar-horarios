@@ -13,6 +13,15 @@ type Profile = {
   timezone: string | null;
 };
 
+type Session = {
+  id: string;
+  title: string;
+  created_by: string | null;
+  is_active: boolean;
+  created_at: string;
+  participants_count: number;
+};
+
 type TimezoneOption = {
   value: string;
   label: string;
@@ -44,6 +53,7 @@ export default function ProfilePage() {
   const router = useRouter();
   const supabase = createClient();
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [sessions, setSessions] = useState<Session[]>([]);
   const [timezone, setTimezone] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -76,6 +86,33 @@ export default function ProfilePage() {
         if (mounted) {
           setProfile(profileData);
           setTimezone(profileData?.timezone || null);
+        }
+
+        // Cargar sesiones del usuario
+        const { data: sessionsData, error: sessionsError } = await supabase
+          .from("sessions")
+          .select(`
+            *,
+            participants(count)
+          `)
+          .eq("created_by", user.id)
+          .order("created_at", { ascending: false });
+
+        if (sessionsError) {
+          console.error("Error cargando sesiones:", sessionsError);
+        } else {
+          if (mounted) {
+            setSessions(
+              (sessionsData ?? []).map((s: any) => ({
+                id: s.id,
+                title: s.title,
+                created_by: s.created_by,
+                is_active: s.is_active,
+                created_at: s.created_at,
+                participants_count: s.participants_count?.[0]?.count || 0,
+              }))
+            );
+          }
         }
       } catch (err) {
         if (mounted) {
@@ -181,7 +218,7 @@ export default function ProfilePage() {
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-8">
-        <div className="space-y-6">
+        <div className="space-y-8">
           <div className="space-y-2">
             <h2 className="text-lg font-bold text-zinc-900 dark:text-white">
               Tu zona horaria
@@ -228,6 +265,55 @@ export default function ProfilePage() {
           >
             {saving ? "Guardando..." : "Guardar zona horaria"}
           </Button>
+        </div>
+
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold text-zinc-900 dark:text-white">
+              Tus sesiones ({sessions.length})
+            </h2>
+            <Button
+              asChild
+              className="px-3 py-1.5 text-sm"
+            >
+              <a href="/session/new">Crear nueva</a>
+            </Button>
+          </div>
+
+          {sessions.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/30 p-8 text-center">
+              <p className="text-zinc-500 dark:text-zinc-400">
+                Aún no has creado ninguna sesión.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {sessions.map((s) => (
+                <div
+                  key={s.id}
+                  className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 p-4 flex items-center justify-between"
+                >
+                  <div>
+                    <h3 className="text-sm font-semibold text-zinc-900 dark:text-white">
+                      {s.title}
+                    </h3>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                      {s.participants_count} participante{s.participants_count !== 1 ? "s" : ""} •
+                      {new Date(s.created_at).toLocaleDateString("es-ES")}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <a
+                      href={`/session/${s.id}`}
+                      className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                    >
+                      Ver sesión
+                    </a>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </main>
     </div>

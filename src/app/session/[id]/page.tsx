@@ -1,8 +1,11 @@
-import { notFound, redirect } from "next/navigation";
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
-import { cookies } from "next/headers";
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "../../lib/supabase/client";
 import OverlapGrid from "../../components/overlap-grid";
 import CopyLinkButton from "../../components/copy-link-button";
+import { Button } from "../../components/ui/button";
 
 type Profile = {
   name: string | null;
@@ -44,70 +47,98 @@ type Session = {
   votes: Vote[];
 };
 
-export default async function SessionPage({
+export default function SessionPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
-  const cookieStore = cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-      },
+  const router = useRouter();
+  const supabase = createClient();
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadSession() {
+      try {
+        const { id } = await params;
+
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        if (!user || authError) {
+          router.push("/login");
+          return;
+        }
+        setCurrentUserId(user.id);
+
+        const { data: sessionData, error: sessionError } = await supabase
+          .from("sessions")
+          .select(`
+            *,
+            participants (
+              id,
+              user_id,
+              profiles ( name, email )
+            ),
+            availabilities (
+              id,
+              user_id,
+              day,
+              start_time,
+              end_time
+            ),
+            votes (
+              id,
+              session_id,
+              overlap_day,
+              overlap_start_time,
+              overlap_end_time,
+              user_id,
+              vote_type
+            )
+          `)
+          .eq("id", id)
+          .single();
+
+        if (sessionError || !sessionData) {
+          if (mounted) {
+            setError("Sesión no encontrada");
+          }
+          return;
+        }
+
+        // Verificar que el usuario sea participante de la sesión
+        const isParticipant = sessionData.participants.some(
+          (p: { user_id: string }) => p.user_id === user.id
+        );
+        if (!isParticipant) {
+          if (mounted) {
+            setError("No tienes acceso a esta sesión");
+          }
+          return;
+        }
+
+        if (mounted) {
+          setSession(sessionData);
+        }
+      } catch (err) {
+        if (mounted) {
+          setError("Error cargando la sesión");
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
     }
-  );
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    redirect("/login");
-  }
-
-  const { data: session, error } = await supabase
-    .from("sessions")
-    .select(`
-      *,
-      participants (
-        id,
-        user_id,
-        profiles ( name, email )
-      ),
-      availabilities (
-        id,
-        user_id,
-        day,
-        start_time,
-        end_time
-      ),
-      votes (
-        id,
-        session_id,
-        overlap_day,
-        overlap_start_time,
-        overlap_end_time,
-        user_id,
-        vote_type
-      )
-    `)
-    .eq("id", id)
-    .single();
-
-  if (error || !session) {
-    notFound();
-  }
-
-  // Verificar que el usuario sea participante de la sesión
-  const isParticipant = session.participants.some(
-    (p: { user_id: string }) => p.user_id === user.id
-  );
-  if (!isParticipant) {
-    notFound();
-  }
+    loadSession();
+    return () => {
+      mounted = false;
+    };
+  }, [params, router, supabase]);
 
   // Calcular overlaps (intersecciones de disponibilidad entre participantes)
   const byDayAndUser = new Map<
@@ -115,7 +146,7 @@ export default async function SessionPage({
     Map<string, Array<{ start_time: string; end_time: string }>>
   >();
 
-  for (const a of session.availabilities ?? []) {
+  for (const a of session?.availabilities ?? []) {
     if (!byDayAndUser.has(a.day)) {
       byDayAndUser.set(a.day, new Map());
     }
@@ -161,7 +192,7 @@ export default async function SessionPage({
   const userVotes: Record<string, "yes" | "no" | "maybe"> = {};
   const voteCounts: Record<string, { yes: number; no: number; maybe: number }> = {};
 
-  for (const v of session.votes ?? []) {
+  for (const v of session?.votes ?? []) {
     const key = `${v.overlap_day}|${v.overlap_start_time}|${v.overlap_end_time}`;
 
     if (!voteCounts[key]) {
@@ -170,7 +201,7 @@ export default async function SessionPage({
     const voteType = v.vote_type as "yes" | "no" | "maybe";
     voteCounts[key][voteType] += 1;
 
-    if (v.user_id === user.id) {
+    if (v.user_id === currentUserId) {
       userVotes[key] = v.vote_type;
     }
   }
@@ -181,7 +212,7 @@ export default async function SessionPage({
     { name: string; email: string | null; blocks: Availability[] }
   >();
 
-  for (const p of session.participants) {
+  for (const p of session?.participants ?? []) {
     const key = p.user_id;
     if (!availabilityByUser.has(key)) {
       availabilityByUser.set(key, {
@@ -192,7 +223,7 @@ export default async function SessionPage({
     }
   }
 
-  for (const a of session.availabilities ?? []) {
+  for (const a of session?.availabilities ?? []) {
     const userInfo = availabilityByUser.get(a.user_id);
     if (userInfo) {
       userInfo.blocks.push(a);
@@ -206,12 +237,43 @@ export default async function SessionPage({
     voteType: "yes" | "no" | "maybe" | null
   ) {
     // El voto se guarda en el cliente mediante VoteButton (usa Supabase directamente)
-    // Esta función se mantiene para sincronizar estado local si fuera necesario
-    const key = `${day}|${start}|${end}`;
-    if (voteType === null) {
-      // Eliminar voto
-      // Nota: la eliminación se maneja en VoteButton con upsert de voto anterior o nuevo
-    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-50 dark:bg-zinc-900 px-4">
+        <div className="animate-pulse flex flex-col items-center gap-4">
+          <div className="h-8 w-32 rounded-full bg-zinc-200 dark:bg-zinc-800" />
+          <div className="h-8 w-16 rounded-full bg-zinc-200 dark:bg-zinc-800" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !session) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-50 dark:bg-zinc-900 px-4">
+        <div className="max-w-md text-center">
+          <h1 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">
+            {error || "Sesión no encontrada"}
+          </h1>
+          <div className="flex flex-col sm:flex-row gap-3 mt-6">
+            <Button
+              asChild
+              className="px-4 py-2 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors"
+            >
+              <a href="/session/new">Crear nueva sesión</a>
+            </Button>
+            <Button
+              asChild
+              className="px-4 py-2 rounded-md border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+            >
+              <a href="/">Volver al inicio</a>
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
